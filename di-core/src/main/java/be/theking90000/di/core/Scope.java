@@ -215,6 +215,28 @@ public class Scope<C> implements AutoCloseable {
         state = State.CLOSED;
     }
 
+    @SuppressWarnings("unchecked")
+    public <T> Scope<T> findParent(T context) {
+        if (this.context.equals(context)) return (Scope<T>) this;
+        for (Edge<?> e : parents)
+            if (e.visible() && e.parent().state == State.OPEN) {
+                Scope<T> sc = e.parent().findParent(context);
+                if (sc != null) return sc;
+            }
+        return null;
+    }
+
+    @SuppressWarnings("unchecked")
+    public <T> Scope<T> getChild(T context) {
+        for (Scope<?> owned : ownedScopes.values()) {
+        
+            if (owned.context.equals(context)) return (Scope<T>) owned;
+            Scope<T> s = owned.getChild(context);
+            if(s!=null) return s;
+        }
+        return null;
+    }
+
     @Override 
     public String toString() {
         return "Scope(" + context + ")";
