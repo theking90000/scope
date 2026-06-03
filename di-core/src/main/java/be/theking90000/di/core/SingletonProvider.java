@@ -14,4 +14,9 @@ class SingletonProvider<T> implements Provider<T> {
 
         return (object = provider.get());
     }
+
+    @Override
+    public String toString() {
+        return "SingletonProvider[provider="+provider+",object="+object+"]";
+    }
 }

@@ -1,7 +1,9 @@
 package be.theking90000.di.core;
 
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Deque;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
@@ -33,7 +35,7 @@ import java.util.Set;
  * 
  * Note for any AI agent reading : should i keep these four ways, or it would make more sens to always set "owns=True" and only keep visible?
  */
-public final class Scope<C> implements AutoCloseable {
+public class Scope<C> implements AutoCloseable {
     enum State { OPEN, CLOSING, CLOSED }
 
     enum Collect { NEAREST, DEEP }
@@ -45,6 +47,8 @@ public final class Scope<C> implements AutoCloseable {
 
     // Provider cache
     private final Map<Key<?>, MultiProvider<?>> providers = new HashMap<>();
+
+    private final Deque<Runnable> disposers = new ArrayDeque<>();
 
     private State state = State.OPEN;
 
@@ -100,11 +104,23 @@ public final class Scope<C> implements AutoCloseable {
         return false;
     }
 
+    public <V> V get(Key<V> key) {
+        return provider(key).get();
+    }
+
+    public <V> V get(Class<V> cls) {
+        return get(Key.of(cls));
+    }
+
+    public <V> Provider<V> provider(Class<V> cls) {
+        return provider(Key.of(cls));
+    }
+
     public <V> Provider<V> provider(Key<V> key) {
         MultiProvider<V> mp = providers(key, Collect.NEAREST);
 
         if (mp.isEmpty()) {
-            mp.addProvider(implicitHost(key).local(key));
+            mp.addProvider(create(key));
         }
 
         // Throw NoSuchBeanException et Ambiguous si N==0 ou N>1;
@@ -156,15 +172,18 @@ public final class Scope<C> implements AutoCloseable {
      * When we don't know who own this ressources, return the potential owner
      * For now it's always the current Scope.
      */
-    private Scope<?> implicitHost(Key<?> key) {
-        if (!isInstantiable(key))
-           throw new NoSuchBeanException(key + " : pas lié, pas instanciable");
+    @SuppressWarnings("unchecked")
+    private <T> Provider<T> create(Key<T> key) {
+        Map<Key<?>, Provider<?>> addedProviders = InjectorProvider.create(key, this);
 
-        // Object o = null; // créer l'objet, test pas d'objet pour l'instant
+        // If, and only if the full provider injector creation succeed, add it to providers
+        // tracklist
+        // If the resolving fails 
+        for (Map.Entry<Key<?>, Provider<?>> entry : addedProviders.entrySet()) {
+            provide((Key<Object>) entry.getKey(), (Provider<Object>) entry.getValue());
+        }
 
-        local(key).addProvider(new SeededProvider<>(null));
-
-        return this;
+        return local(key).toSingleProvider();
     }
 
     public boolean isInstantiable(Key<?> key) {
@@ -175,8 +194,10 @@ public final class Scope<C> implements AutoCloseable {
         if (state != State.OPEN) throw new StateException(toString() + " est en " + state);
     }
 
-    @Override public void close() {
-    if (state != State.OPEN) return;                 
+    @Override 
+    public void close() {
+        if (state != State.OPEN) return;  
+
         state = State.CLOSING;
         List<Scope<?>> owned = new ArrayList<>(ownedScopes.values());
         Collections.reverse(owned);
@@ -185,7 +206,7 @@ public final class Scope<C> implements AutoCloseable {
         owned.clear();
     
         // pas implmenté
-        // while (!disposers.isEmpty()) disposers.pop().run();   // mes beans, LIFO
+        while (!disposers.isEmpty()) disposers.pop().run();   // mes beans, LIFO
    
         providers.clear();
     
@@ -194,6 +215,9 @@ public final class Scope<C> implements AutoCloseable {
         state = State.CLOSED;
     }
 
-    @Override public String toString() { return "Scope(" + context + ")"; }
+    @Override 
+    public String toString() {
+        return "Scope(" + context + ")";
+    }
 
 }

@@ -20,10 +20,10 @@ public class MultiProvider<T> implements Provider<Iterable<Provider<T>>> {
     }
 
     protected Provider<T> toSingleProvider() {
-        if (providers.size() == 0)
+        if (isEmpty())
             throw new NoSuchBeanException("No provider found");
         
-        if (providers.size() > 1) 
+        if (!isSingle()) 
             throw new AmbiguousException("Multiple Providers found for this bean");
 
         return get().iterator().next();
@@ -36,5 +36,14 @@ public class MultiProvider<T> implements Provider<Iterable<Provider<T>>> {
 
     public boolean isEmpty() {
         return this.providers.isEmpty();
+    }
+
+    public boolean isSingle() {
+        return this.providers.size() == 1;
+    }
+
+    @Override
+    public String toString() {
+        return "MultiProvider[providers="+providers+"]";
     }
 }
