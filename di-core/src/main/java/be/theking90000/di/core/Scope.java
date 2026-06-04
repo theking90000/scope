@@ -25,6 +25,67 @@ import java.util.Set;
  * created beans are stored as scoped singletons and are cleared when the scope
  * closes.</p>
  *
+ * <h2>Programming-language mental model</h2>
+ *
+ * <p>A scope can be read like a block scope in a programming language such as
+ * JavaScript or Rust. A bean registered in an outer scope is visible to inner
+ * scopes, unless a nearer scope defines the same key. The nearest definition
+ * shadows the outer one, the same way a local variable shadows a variable from
+ * an outer block.</p>
+ *
+ * <pre>{@code
+ * // RootScope
+ * {
+ *     x = value;
+ *
+ *     // PlayerScope, owned by and visible to RootScope
+ *     {
+ *         player = value;
+ *         classes = ...;
+ *
+ *         // Beans created here can inject player, classes, and x.
+ *         // If this scope defines x too, that local x shadows RootScope.x.
+ *     }
+ *
+ *     // GameScope
+ *     {
+ *         game = value;
+ *         players = List<Scope<Player>>;
+ *
+ *         // Player1Scope
+ *         {
+ *             player = player1;
+ *         }
+ *
+ *         // Player2Scope
+ *         {
+ *             player = player2;
+ *         }
+ *     }
+ * }
+ * }</pre>
+ *
+ * <p>This is the classic tree-shaped view: a child inherits the visible
+ * providers from its parent, and lookup uses {@link Collect#NEAREST} by default.
+ * Constructor-created classes follow the same rule: they are created inside the
+ * scope that resolved them, so their dependencies see that scope first, then
+ * visible parents.</p>
+ *
+ * <h2>Graph and multi-parent scopes</h2>
+ *
+ * <p>Scopes are not limited to a strict tree. A scope can have multiple visible
+ * parents, forming a directed acyclic graph. This is useful when an object lives
+ * at the intersection of several contexts. For example, a game-player scope can
+ * see both the game scope and the player's global scope, so injected classes can
+ * access game-local services and player-local services at the same time.</p>
+ *
+ * <p>The power of a multi-parent graph comes with ambiguity. If two visible
+ * parents provide the same key and neither one is nearer on a single branch,
+ * resolving a single provider is ambiguous and fails with
+ * {@link AmbiguousBeanException}. The caller can either shadow the key locally,
+ * qualify one side with {@link Named}, or request all matching providers through
+ * {@link #providers(Key)}.</p>
+ *
  * @param <C> the type of context object represented by this scope
  */
 public class Scope<C> implements AutoCloseable {
