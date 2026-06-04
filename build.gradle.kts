@@ -2,9 +2,19 @@ plugins {
     base
 }
 
+val defaultVersion = property("version").toString()
+val resolvedVersion = if (System.getenv("GITHUB_REF_TYPE") == "tag") {
+    System.getenv("GITHUB_REF_NAME")
+        ?.takeIf { it.startsWith("v") }
+        ?.removePrefix("v")
+        ?: defaultVersion
+} else {
+    defaultVersion
+}
+
 allprojects {
     group = "be.theking90000.di"
-    version = "0.1.0-SNAPSHOT"
+    version = resolvedVersion
 
     repositories {
         mavenCentral()
@@ -13,6 +23,7 @@ allprojects {
 
 subprojects {
     apply(plugin = "java-library")
+    apply(plugin = "maven-publish")
 
     extensions.configure<JavaPluginExtension> {
         toolchain {
@@ -24,5 +35,50 @@ subprojects {
 
     tasks.withType<Test>().configureEach {
         useJUnitPlatform()
+    }
+
+    extensions.configure<PublishingExtension> {
+        publications {
+            create<MavenPublication>("mavenJava") {
+                from(components["java"])
+
+                pom {
+                    name = project.name
+                    description = "Dependency injection utilities for Java."
+                    url = "https://github.com/theking90000/mclib3"
+
+                    licenses {
+                        license {
+                            name = "MIT License"
+                            url = "https://opensource.org/licenses/MIT"
+                        }
+                    }
+
+                    developers {
+                        developer {
+                            id = "theking90000"
+                            name = "theking90000"
+                        }
+                    }
+
+                    scm {
+                        connection = "scm:git:git://github.com/theking90000/mclib3.git"
+                        developerConnection = "scm:git:ssh://github.com/theking90000/mclib3.git"
+                        url = "https://github.com/theking90000/mclib3"
+                    }
+                }
+            }
+        }
+
+        repositories {
+            maven {
+                name = "GitHubPackages"
+                url = uri("https://maven.pkg.github.com/theking90000/mclib3")
+                credentials {
+                    username = System.getenv("GITHUB_ACTOR")
+                    password = System.getenv("GITHUB_TOKEN")
+                }
+            }
+        }
     }
 }
