@@ -63,7 +63,7 @@ public class InjectorProvider<T> implements Provider<T> {
 
     @Override
     public String toString() {
-        return "InjectorProvider[injector="+injector+",providers="+providers+"]";
+        return "InjectorProvider[injector="+injector+"]";
     }
     
 

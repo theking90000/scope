@@ -61,12 +61,20 @@ public class Scope<C> implements AutoCloseable {
         seed(Key.of(Scope.class), this);
     };
 
+    public <V> Scope<C> provide(Class<V> cls, Provider<V> provider) {
+        return provide(Key.of(cls), provider);
+    }
+
     public <V> Scope<C> provide(Key<V> key, Provider<V> provider) {
         checkOpen();
             
         local(key).addProvider(provider);
 
         return this;
+    }
+
+    public <V> Scope<C> seed(Class<V> cls, V value) {
+        return seed(Key.of(cls), value);
     }
 
     public <V> Scope<C> seed(Key<V> key, V value) {
@@ -125,6 +133,18 @@ public class Scope<C> implements AutoCloseable {
 
         // Throw NoSuchBeanException et Ambiguous si N==0 ou N>1;
         return mp.toSingleProvider();
+    }
+
+    public <V> MultiProvider<V> providers(Class<V> cls) {
+        return providers(Key.of(cls));
+    }
+
+    public <V> MultiProvider<V> providers(Class<V> cls, Collect mode) {
+        return providers(Key.of(cls), mode);
+    }
+
+    public <V> MultiProvider<V> providers(Key<V> key) {
+        return providers(key, Collect.NEAREST);
     }
 
     public <V> MultiProvider<V> providers(Key<V> key, Collect mode) {

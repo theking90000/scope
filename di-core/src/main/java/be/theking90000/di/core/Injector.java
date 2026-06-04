@@ -37,31 +37,7 @@ public class Injector<T> {
                 if (p.getType() == Provider.class) {
                     isProvider = true;
 
-                    Type pp = p.getParameterizedType();
-
-                    if (pp instanceof ParameterizedType pt) {
-                        Type[] args = pt.getActualTypeArguments();
-
-                        if (args.length != 1) {
-                            throw new NoSuchBeanException(
-                                cls + " Provider is missing type argument : Provider<T>"
-                            );
-                        }
-
-                        Type arg = args[0];
-
-                        if (!(arg instanceof Class<?> clazz)) {
-                            throw new NoSuchBeanException(
-                                cls + " Provider<T> requires T to be a concrete class"
-                            );
-                        }
-
-                        type = clazz;
-                    } else {
-                        throw new NoSuchBeanException(
-                            cls + " Provider is missing type argument : Provider<T>"
-                        );
-                    }
+                    type = readType(p.getParameterizedType());
                 }
 
                 if (cls.isLocalClass() || cls.isAnonymousClass()) {
@@ -84,6 +60,39 @@ public class Injector<T> {
             );
         }
         
+    }
+
+    private Class<?> readType(Type pp) {
+        if (pp instanceof ParameterizedType pt) {
+            Type[] args = pt.getActualTypeArguments();
+
+            if (args.length != 1) {
+                throw new NoSuchBeanException(
+                    cls + " "+pp.getTypeName()+" is missing type argument : "+pp.getTypeName()+"<T>"
+                );
+            }
+
+            Type arg = args[0];
+
+            if (arg instanceof ParameterizedType pt2) {
+                if(pt2.getRawType() == Iterable.class) {
+                    return readType(pt2);
+                }                
+            }
+
+            if (!(arg instanceof Class<?> clazz)) {
+                throw new NoSuchBeanException(
+                    cls + " "+pp.getTypeName()+"<T>requires T to be a concrete class"
+                );
+            }
+
+            return clazz;
+        } 
+
+        throw new NoSuchBeanException(
+            cls + " "+pp.getTypeName()+" is missing type argument : "+pp.getTypeName()+"<T>"
+        );
+    
     }
 
     public Iterable<InjectedKey<?>> getParameters() {
