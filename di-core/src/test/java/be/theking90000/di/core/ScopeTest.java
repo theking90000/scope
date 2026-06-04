@@ -35,7 +35,7 @@ class ScopeTest {
        assertEquals(english.provider(k).get().message(), "Hello");
 
        final Scope<LanguageScope> quebec = new Scope<>(new LanguageScope("quebec"));
-       assertThrows(NoSuchBeanException.class, () -> quebec.provider(k));
+       assertThrows(UnsupportedInjectionException.class, () -> quebec.provider(k));
        
        quebec.ownedBy(french);
 
@@ -56,7 +56,7 @@ class ScopeTest {
        quebec2.ownedBy(english);
        quebec2.ownedBy(french);
 
-       assertThrows(AmbiguousException.class, () -> quebec2.provider(k));
+       assertThrows(AmbiguousBeanException.class, () -> quebec2.provider(k));
 
        Key<Message> k2 = Key.of(Message.class, "word");
        english.seed(k2, new Message("Word"));
@@ -66,7 +66,7 @@ class ScopeTest {
        root.seed(k2, new Message("root:Word"));
        assertEquals(french.provider(k2).get().message(), "root:Word");
        assertEquals(english.provider(k2).get().message(), "Word");
-       assertThrows(AmbiguousException.class, () -> quebec2.provider(k2));
+       assertThrows(AmbiguousBeanException.class, () -> quebec2.provider(k2));
 
        quebec2.close();
     }

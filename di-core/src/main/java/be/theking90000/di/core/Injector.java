@@ -38,7 +38,7 @@ public class Injector<T> {
      * Creates an injector for a class with exactly one public constructor.
      *
      * @param type class to inspect
-     * @throws NoSuchBeanException if the class cannot be constructed by this injector
+     * @throws UnsupportedInjectionException if the class cannot be constructed by this injector
      */
     @SuppressWarnings("unchecked")
     private Injector(Class<T> type) {
@@ -62,13 +62,13 @@ public class Injector<T> {
                 }
 
                 if (type.isLocalClass() || type.isAnonymousClass()) {
-                    throw new NoSuchBeanException(
+                    throw new UnsupportedInjectionException(
                         type + " local/anonymous classes are not supported by DI"
                     );
                 }
 
                 if (type.getEnclosingClass() != null && !Modifier.isStatic(type.getModifiers())) {
-                    throw new NoSuchBeanException(
+                    throw new UnsupportedInjectionException(
                         type + " non-static inner classes are not supported by DI"
                     );
                 }
@@ -76,7 +76,7 @@ public class Injector<T> {
                 parameters.add(new InjectedKey<>(Key.of(parameterType, name), isProvider));
             }
         } else {
-            throw new NoSuchBeanException(
+            throw new UnsupportedInjectionException(
                 type + " does not have exactly one public constructor"
             );
         }
@@ -87,14 +87,14 @@ public class Injector<T> {
      *
      * @param parameterizedType parameterized type to inspect
      * @return concrete class represented by the type argument
-     * @throws NoSuchBeanException if the type argument is missing or not concrete
+     * @throws UnsupportedInjectionException if the type argument is missing or not concrete
      */
     private Class<?> readType(Type parameterizedType) {
         if (parameterizedType instanceof ParameterizedType parameterType) {
             Type[] args = parameterType.getActualTypeArguments();
 
             if (args.length != 1) {
-                throw new NoSuchBeanException(
+                throw new UnsupportedInjectionException(
                     type + " " + parameterizedType.getTypeName()
                             + " is missing type argument: " + parameterizedType.getTypeName() + "<T>"
                 );
@@ -109,7 +109,7 @@ public class Injector<T> {
             }
 
             if (!(arg instanceof Class<?> clazz)) {
-                throw new NoSuchBeanException(
+                throw new UnsupportedInjectionException(
                     type + " " + parameterizedType.getTypeName() + "<T> requires T to be a concrete class"
                 );
             }
@@ -117,7 +117,7 @@ public class Injector<T> {
             return clazz;
         } 
 
-        throw new NoSuchBeanException(
+        throw new UnsupportedInjectionException(
             type + " " + parameterizedType.getTypeName()
                     + " is missing type argument: " + parameterizedType.getTypeName() + "<T>"
         );
@@ -137,11 +137,11 @@ public class Injector<T> {
      *
      * @param providers providers in the same order as {@link #getParameters()}
      * @return newly constructed instance
-     * @throws InstantiationException if the provider list is incomplete or reflection fails
+     * @throws BeanCreationException if the provider list is incomplete or reflection fails
      */
     public T instantiate(List<Provider<?>> providers) {
         if (providers.size() != this.parameters.size())
-            throw new InstantiationException(
+            throw new BeanCreationException(
                     "Missing parameters for " + type.getCanonicalName()
                             + ": received " + providers.size()
                             + ", expected " + this.parameters.size()
@@ -160,20 +160,8 @@ public class Injector<T> {
         try {
             return this.constructor.newInstance(resolvedParameters);
         } catch (ReflectiveOperationException e) {
-            throw new InstantiationException(e);
+            throw new BeanCreationException(e);
         }
-    }
-
-    /**
-     * Creates an instance from providers matching this injector's constructor parameters.
-     *
-     * @param providers providers in the same order as {@link #getParameters()}
-     * @return newly constructed instance
-     * @deprecated use {@link #instantiate(List)}
-     */
-    @Deprecated
-    public T instanciate(List<Provider<?>> providers) {
-        return instantiate(providers);
     }
 
     /**
@@ -182,7 +170,7 @@ public class Injector<T> {
      * @param type type to inspect
      * @param <T> type created by the injector
      * @return injector for the requested type
-     * @throws NoSuchBeanException if the type cannot be constructed by this injector
+     * @throws UnsupportedInjectionException if the type cannot be constructed by this injector
      */
     public static <T> Injector<T> of(Class<T> type) {
         return new Injector<>(type);

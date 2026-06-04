@@ -117,7 +117,7 @@ public class Scope<C> implements AutoCloseable {
      * @param provider provider to register
      * @param <V> provided value type
      * @return this scope for chaining
-     * @throws StateException if this scope is not open
+     * @throws ScopeStateException if this scope is not open
      */
     public <V> Scope<C> provide(Class<V> type, Provider<V> provider) {
         return provide(Key.of(type), provider);
@@ -130,7 +130,7 @@ public class Scope<C> implements AutoCloseable {
      * @param provider provider to register
      * @param <V> provided value type
      * @return this scope for chaining
-     * @throws StateException if this scope is not open
+     * @throws ScopeStateException if this scope is not open
      */
     public <V> Scope<C> provide(Key<V> key, Provider<V> provider) {
         checkOpen();
@@ -147,7 +147,7 @@ public class Scope<C> implements AutoCloseable {
      * @param value value to return for this type
      * @param <V> seeded value type
      * @return this scope for chaining
-     * @throws StateException if this scope is not open
+     * @throws ScopeStateException if this scope is not open
      */
     public <V> Scope<C> seed(Class<V> type, V value) {
         return seed(Key.of(type), value);
@@ -160,7 +160,7 @@ public class Scope<C> implements AutoCloseable {
      * @param value value to return for this key
      * @param <V> seeded value type
      * @return this scope for chaining
-     * @throws StateException if this scope is not open
+     * @throws ScopeStateException if this scope is not open
      */
     public <V> Scope<C> seed(Key<V> key, V value) {
         provide(key, new SeededProvider<>(value));
@@ -179,21 +179,21 @@ public class Scope<C> implements AutoCloseable {
      * @param owns whether the parent owns this scope's lifetime
      * @param visible whether this scope can resolve providers from the parent
      * @return this scope for chaining
-     * @throws CycleException if the edge would create a cycle
-     * @throws ScopeException if this scope would replace an open owned child
-     * @throws StateException if this scope is not open
+     * @throws ScopeCycleException if the edge would create a cycle
+     * @throws ScopeConflictException if this scope would replace an open owned child
+     * @throws ScopeStateException if this scope is not open
      */
     public Scope<C> attach(Scope<?> parent, boolean owns, boolean visible) {
         checkOpen();
 
         if (reaches(parent, this)) {
-            throw new CycleException(this.context + " -> " + parent.context + " would create a cycle");
+            throw new ScopeCycleException(this.context + " -> " + parent.context + " would create a cycle");
         }
 
         if (owns) {
             Scope<?> current = parent.ownedScopes.get(this.context);
             if (current != null && current.state == State.OPEN) {
-                throw new ScopeException("Existing scope cannot be replaced");
+                throw new ScopeConflictException("Existing scope cannot be replaced");
             }
 
             parent.ownedScopes.put(this.context, this);
@@ -248,7 +248,7 @@ public class Scope<C> implements AutoCloseable {
      * @param <V> resolved value type
      * @return resolved value
      * @throws NoSuchBeanException if no provider can be found or created
-     * @throws AmbiguousException if more than one nearest provider matches
+     * @throws AmbiguousBeanException if more than one nearest provider matches
      */
     public <V> V get(Key<V> key) {
         return provider(key).get();
@@ -261,7 +261,7 @@ public class Scope<C> implements AutoCloseable {
      * @param <V> resolved value type
      * @return resolved value
      * @throws NoSuchBeanException if no provider can be found or created
-     * @throws AmbiguousException if more than one nearest provider matches
+     * @throws AmbiguousBeanException if more than one nearest provider matches
      */
     public <V> V get(Class<V> type) {
         return get(Key.of(type));
@@ -274,7 +274,7 @@ public class Scope<C> implements AutoCloseable {
      * @param <V> provided value type
      * @return provider for the requested type
      * @throws NoSuchBeanException if no provider can be found or created
-     * @throws AmbiguousException if more than one nearest provider matches
+     * @throws AmbiguousBeanException if more than one nearest provider matches
      */
     public <V> Provider<V> provider(Class<V> type) {
         return provider(Key.of(type));
@@ -287,7 +287,7 @@ public class Scope<C> implements AutoCloseable {
      * @param <V> provided value type
      * @return provider for the requested key
      * @throws NoSuchBeanException if no provider can be found or created
-     * @throws AmbiguousException if more than one nearest provider matches
+     * @throws AmbiguousBeanException if more than one nearest provider matches
      */
     public <V> Provider<V> provider(Key<V> key) {
         MultiProvider<V> multiProvider = providers(key, Collect.NEAREST);
@@ -435,10 +435,10 @@ public class Scope<C> implements AutoCloseable {
     /**
      * Ensures this scope can still accept operations.
      *
-     * @throws StateException if this scope is closing or closed
+     * @throws ScopeStateException if this scope is closing or closed
      */
-    private void checkOpen() throws CycleException {
-        if (state != State.OPEN) throw new StateException(toString() + " is " + state);
+    private void checkOpen() {
+        if (state != State.OPEN) throw new ScopeStateException(toString() + " is " + state);
     }
 
     /**

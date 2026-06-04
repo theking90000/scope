@@ -75,7 +75,7 @@ public class InjectTest {
         A.i=0;
         Scope<RootScope> root = new Scope<>(new RootScope());
         
-        assertThrows(NoSuchBeanException.class, () -> root.provider(C.class));
+        assertThrows(UnsupportedInjectionException.class, () -> root.provider(C.class));
         
         assertEquals(0, A.i);
         Provider<B> b = root.provider(B.class);

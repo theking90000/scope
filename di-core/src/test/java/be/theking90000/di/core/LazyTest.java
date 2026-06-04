@@ -77,7 +77,7 @@ public class LazyTest {
             root.provide(Counter.class, () -> new Counter(j));
         }
 
-        assertThrows(AmbiguousException.class, ()->root.get(Counter.class));
+        assertThrows(AmbiguousBeanException.class, ()->root.get(Counter.class));
 
         for (Provider<Counter> p : root.providers(Counter.class).get()) {
             System.out.println(p.get());

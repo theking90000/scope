@@ -3,13 +3,13 @@ package be.theking90000.di.core;
 /**
  * Thrown when an operation is attempted on a scope that is not open.
  */
-public class StateException extends CycleException {
+public class ScopeStateException extends ScopeException {
     /**
-     * Creates a state exception.
+     * Creates a scope state exception.
      *
      * @param message detail message
      */
-    public StateException(String message) {
+    public ScopeStateException(String message) {
         super(message);
     }
 }

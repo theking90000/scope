@@ -1,9 +1,9 @@
 package be.theking90000.di.core;
 
 /**
- * Base runtime exception for scope and injection failures.
+ * Base exception for scope graph and lifecycle failures.
  */
-public class ScopeException extends RuntimeException {
+public class ScopeException extends DiException {
     /**
      * Creates a scope exception.
      *

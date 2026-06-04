@@ -41,14 +41,14 @@ public class MultiProvider<T> implements Provider<Iterable<Provider<T>>> {
      *
      * @return the only provider in this group
      * @throws NoSuchBeanException if the group is empty
-     * @throws AmbiguousException if the group contains multiple providers
+     * @throws AmbiguousBeanException if the group contains multiple providers
      */
     protected Provider<T> toSingleProvider() {
         if (isEmpty())
             throw new NoSuchBeanException("No provider found");
 
         if (!isSingle()) 
-            throw new AmbiguousException("Multiple providers found for this bean");
+            throw new AmbiguousBeanException("Multiple providers found for this bean");
 
         return get().iterator().next();
     }
