@@ -3,6 +3,7 @@ package be.theking90000.di.core;
 /**
  * Base exception for scope graph and lifecycle failures.
  */
+@SuppressWarnings("serial")
 public class ScopeException extends DiException {
     /**
      * Creates a scope exception.

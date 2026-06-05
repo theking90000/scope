@@ -3,6 +3,7 @@ package be.theking90000.di.core;
 /**
  * Thrown when a lookup resolves more than one provider where exactly one is required.
  */
+@SuppressWarnings("serial")
 public class AmbiguousBeanException extends BeanResolutionException {
     /**
      * Creates an ambiguous-bean exception.

@@ -167,7 +167,7 @@ public class Scope<C> implements AutoCloseable {
      *
      * @param context context object that identifies and describes this scope
      */
-    @SuppressWarnings("unchecked")
+    @SuppressWarnings({"unchecked", "this-escape"})
     public Scope(C context) {
         this.context = context;
 

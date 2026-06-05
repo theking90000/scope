@@ -6,7 +6,6 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.util.ArrayList;
-import java.util.List;
 
 
 
@@ -20,7 +19,7 @@ public class PlayerTest {
         }
     };
 
-    public static record B(Player player, RootScope rs, Scope s){}
+    public static record B(Player player, RootScope rs, Scope<?> s){}
 
     public static class GamePlayer { int stat = 0;
         Player player;
@@ -47,6 +46,7 @@ public class PlayerTest {
         }
     };
 
+    @SuppressWarnings({"rawtypes", "unchecked"})
     public static class Game {
         String name;
         Scope<GameScope> scope;

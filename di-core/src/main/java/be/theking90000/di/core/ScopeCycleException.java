@@ -3,6 +3,7 @@ package be.theking90000.di.core;
 /**
  * Thrown when adding a scope edge would create a cycle in the scope graph.
  */
+@SuppressWarnings("serial")
 public class ScopeCycleException extends ScopeException {
     /**
      * Creates a scope cycle exception.

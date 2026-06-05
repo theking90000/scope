@@ -3,6 +3,7 @@ package be.theking90000.di.core;
 /**
  * Base exception for failures while resolving, selecting, or creating beans.
  */
+@SuppressWarnings("serial")
 public class BeanResolutionException extends DiException {
     /**
      * Creates a bean resolution exception.
