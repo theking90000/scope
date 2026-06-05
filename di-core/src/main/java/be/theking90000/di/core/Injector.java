@@ -199,7 +199,7 @@ public class Injector<T> {
      * @param scope scope that owns the instance
      */
     void registerDisposers(T instance, Scope<?> scope) {
-        for (AsyncDisposer disposer : lifecycleHooks.disposers(instance)) {
+        for (Disposer disposer : lifecycleHooks.disposers(instance)) {
             scope.addDisposer(disposer);
         }
     }

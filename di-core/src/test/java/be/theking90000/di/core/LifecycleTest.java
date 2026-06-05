@@ -4,13 +4,9 @@ import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionException;
-import java.util.concurrent.CompletionStage;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class LifecycleTest {
     record RootScope() {}
@@ -69,7 +65,7 @@ class LifecycleTest {
         Scope<RootScope> scope = new Scope<>(new RootScope());
 
         scope.get(Destroyed.class);
-        scope.closeAsync().toCompletableFuture().join();
+        scope.close();
 
         assertEquals(1, Destroyed.preDestroyCalls);
     }
@@ -115,7 +111,7 @@ class LifecycleTest {
         scope.seed(Recorder.class, recorder);
 
         scope.get(ChildLifecycle.class);
-        scope.closeAsync().toCompletableFuture().join();
+        scope.close();
 
         assertEquals(
                 List.of("parent:start", "child:start", "child:stop", "parent:stop"),
@@ -141,7 +137,7 @@ class LifecycleTest {
         Scope<RootScope> scope = new Scope<>(new RootScope());
 
         scope.get(CloseableOnly.class);
-        scope.closeAsync().toCompletableFuture().join();
+        scope.close();
 
         assertEquals(1, CloseableOnly.closeCalls);
     }
@@ -172,85 +168,27 @@ class LifecycleTest {
         Scope<RootScope> scope = new Scope<>(new RootScope());
 
         scope.get(AnnotatedClose.class);
-        scope.closeAsync().toCompletableFuture().join();
+        scope.close();
 
         assertEquals(1, AnnotatedClose.preDestroyCalls);
         assertEquals(1, AnnotatedClose.closeCalls);
     }
 
-    public static class AsyncDestroyed {
-        static final CompletableFuture<Void> cleanup = new CompletableFuture<>();
-        static int calls = 0;
-
-        public AsyncDestroyed() {
+    public static class CompletionStageDestroyed {
+        public CompletionStageDestroyed() {
         }
 
         @PreDestroy
-        private CompletionStage<Void> stopAsync() {
-            calls++;
-            return cleanup;
+        private java.util.concurrent.CompletionStage<Void> stopAsync() {
+            return null;
         }
     }
 
     @Test
-    void closeAsyncWaitsForAsyncPreDestroy() {
-        AsyncDestroyed.calls = 0;
-        Scope<RootScope> scope = new Scope<>(new RootScope());
-        scope.get(AsyncDestroyed.class);
-
-        CompletionStage<Void> closed = scope.closeAsync();
-
-        assertEquals(1, AsyncDestroyed.calls);
-        assertTrue(!closed.toCompletableFuture().isDone());
-
-        AsyncDestroyed.cleanup.complete(null);
-        closed.toCompletableFuture().join();
-    }
-
-    public static class AsyncDestroyedForClose {
-        static CompletableFuture<Void> cleanup;
-
-        public AsyncDestroyedForClose() {
-        }
-
-        @PreDestroy
-        private CompletionStage<Void> stopAsync() {
-            cleanup = new CompletableFuture<>();
-            return cleanup;
-        }
-    }
-
-    public static class InvalidAsyncDestroyed {
-        public InvalidAsyncDestroyed() {
-        }
-
-        @PreDestroy
-        private CompletionStage<String> stopAsync() {
-            return CompletableFuture.completedFuture("done");
-        }
-    }
-
-    @Test
-    void preDestroyRequiresCompletionStageVoid() {
+    void preDestroyRejectsCompletionStage() {
         Scope<RootScope> scope = new Scope<>(new RootScope());
 
-        assertThrows(UnsupportedInjectionException.class, () -> scope.get(InvalidAsyncDestroyed.class));
-    }
-
-    @Test
-    void closeLeavesScopeClosingUntilAsyncCleanupFinishes() {
-        Scope<RootScope> scope = new Scope<>(new RootScope());
-        scope.get(AsyncDestroyedForClose.class);
-
-        scope.close();
-
-        ScopeStateException closing = assertThrows(ScopeStateException.class, () -> scope.get(RootScope.class));
-        assertTrue(closing.getMessage().contains("CLOSING"));
-
-        AsyncDestroyedForClose.cleanup.complete(null);
-
-        ScopeStateException closed = assertThrows(ScopeStateException.class, () -> scope.get(RootScope.class));
-        assertTrue(closed.getMessage().contains("CLOSED"));
+        assertThrows(UnsupportedInjectionException.class, () -> scope.get(CompletionStageDestroyed.class));
     }
 
     public static class FailingDestroyed {
@@ -276,13 +214,13 @@ class LifecycleTest {
         Scope<RootScope> scope = new Scope<>(new RootScope());
         scope.get(FailingDestroyed.class);
 
-        CompletionException failure = assertThrows(
-                CompletionException.class,
-                () -> scope.closeAsync().toCompletableFuture().join()
+        ScopeException failure = assertThrows(
+                ScopeException.class,
+                scope::close
         );
 
         assertEquals(1, FailingDestroyed.successfulCalls);
-        assertEquals(1, failure.getCause().getSuppressed().length);
+        assertEquals(1, failure.getSuppressed().length);
     }
 
     @Test
@@ -291,8 +229,45 @@ class LifecycleTest {
         Scope<RootScope> scope = new Scope<>(new RootScope());
 
         scope.seed(CloseableOnly.class, new CloseableOnly());
-        scope.closeAsync().toCompletableFuture().join();
+        scope.close();
 
         assertEquals(0, CloseableOnly.closeCalls);
+    }
+
+    record ChildScope(String name) {}
+
+    @Test
+    void ownedChildrenCloseInReverseAttachmentOrder() {
+        Scope<RootScope> root = new Scope<>(new RootScope());
+        Recorder recorder = new Recorder();
+
+        Scope<ChildScope> first = new Scope<>(new ChildScope("first"));
+        first.seed(Recorder.class, recorder);
+        first.get(ChildResource.class);
+        first.ownedBy(root);
+
+        Scope<ChildScope> second = new Scope<>(new ChildScope("second"));
+        second.seed(Recorder.class, recorder);
+        second.get(ChildResource.class);
+        second.ownedBy(root);
+
+        root.close();
+
+        assertEquals(List.of("second", "first"), recorder.events());
+    }
+
+    public static class ChildResource {
+        private final ChildScope scope;
+        private final Recorder recorder;
+
+        public ChildResource(ChildScope scope, Recorder recorder) {
+            this.scope = scope;
+            this.recorder = recorder;
+        }
+
+        @PreDestroy
+        private void stop() {
+            recorder.add(scope.name());
+        }
     }
 }

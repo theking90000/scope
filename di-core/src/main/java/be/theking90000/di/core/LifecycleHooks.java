@@ -2,13 +2,9 @@ package be.theking90000.di.core;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.lang.reflect.ParameterizedType;
-import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionStage;
 
 /**
  * Scanned lifecycle hooks for one injectable type.
@@ -75,14 +71,11 @@ final class LifecycleHooks {
         }
     }
 
-    List<AsyncDisposer> disposers(Object instance) {
-        List<AsyncDisposer> disposers = new ArrayList<>();
+    List<Disposer> disposers(Object instance) {
+        List<Disposer> disposers = new ArrayList<>();
 
         if (autoCloseable && !closeAlreadyAnnotated) {
-            disposers.add(() -> {
-                ((AutoCloseable) instance).close();
-                return CompletableFuture.completedFuture(null);
-            });
+            disposers.add(() -> ((AutoCloseable) instance).close());
         }
 
         for (Method method : preDestroy) {
@@ -115,10 +108,6 @@ final class LifecycleHooks {
             return;
         }
 
-        if (hook == Hook.PRE_DESTROY && isCompletionStageOfVoid(method)) {
-            return;
-        }
-
         throw new UnsupportedInjectionException(
                 hook + " method " + method + " has unsupported return type " + returnType.getTypeName()
         );
@@ -134,20 +123,6 @@ final class LifecycleHooks {
         return method.getName().equals("close") && method.getParameterCount() == 0;
     }
 
-    private static boolean isCompletionStageOfVoid(Method method) {
-        if (!CompletionStage.class.isAssignableFrom(method.getReturnType())) {
-            return false;
-        }
-
-        Type genericReturnType = method.getGenericReturnType();
-        if (genericReturnType instanceof ParameterizedType parameterizedType) {
-            Type[] args = parameterizedType.getActualTypeArguments();
-            return args.length == 1 && args[0] == Void.class;
-        }
-
-        return false;
-    }
-
     private static void invokePostConstruct(Method method, Object instance) {
         try {
             Object result = method.invoke(instance);
@@ -161,34 +136,19 @@ final class LifecycleHooks {
         }
     }
 
-    @SuppressWarnings("unchecked")
-    private static CompletionStage<Void> invokePreDestroy(Method method, Object instance) {
+    private static void invokePreDestroy(Method method, Object instance) {
         try {
             Object result = method.invoke(instance);
 
             if (method.getReturnType() == Void.class) {
                 if (result != null) {
-                    return CompletableFuture.failedFuture(
-                            new BeanCreationException(method + " must return null")
-                    );
+                    throw new BeanCreationException(method + " must return null");
                 }
-                return CompletableFuture.completedFuture(null);
             }
-
-            if (CompletionStage.class.isAssignableFrom(method.getReturnType())) {
-                if (result == null) {
-                    return CompletableFuture.failedFuture(
-                            new BeanCreationException(method + " must not return null")
-                    );
-                }
-                return (CompletionStage<Void>) result;
-            }
-
-            return CompletableFuture.completedFuture(null);
         } catch (IllegalAccessException e) {
-            return CompletableFuture.failedFuture(e);
+            throw new ScopeException(e);
         } catch (InvocationTargetException e) {
-            return CompletableFuture.failedFuture(e.getCause());
+            throw new ScopeException(e.getCause());
         }
     }
 }

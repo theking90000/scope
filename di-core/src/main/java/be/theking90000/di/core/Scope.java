@@ -6,13 +6,12 @@ import java.util.Collections;
 import java.util.Deque;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
-import java.util.concurrent.CompletionStage;
 
 /**
  * Lifetime container for beans that are resolved and cached within a scoped graph.
@@ -142,7 +141,7 @@ public class Scope<C> implements AutoCloseable {
     /**
      * Direct owned descendants keyed by their context object.
      */
-    private final Map<Object, Scope<?>> ownedScopes = new HashMap<>();
+    private final Map<Object, Scope<?>> ownedScopes = new LinkedHashMap<>();
 
     /**
      * Parent edges that define lifetime ownership and visibility.
@@ -157,10 +156,9 @@ public class Scope<C> implements AutoCloseable {
     /**
      * Local cleanup callbacks executed in LIFO order during close.
      */
-    private final Deque<AsyncDisposer> disposers = new ArrayDeque<>();
+    private final Deque<Disposer> disposers = new ArrayDeque<>();
 
     private State state = State.OPEN;
-    private CompletionStage<Void> closeStage;
 
     /**
      * Creates a scope for the given context and seeds the context plus this scope.
@@ -575,99 +573,71 @@ public class Scope<C> implements AutoCloseable {
      * @param disposer cleanup callback to run during close
      * @throws ScopeStateException if this scope is not open
      */
-    void addDisposer(AsyncDisposer disposer) {
+    void addDisposer(Disposer disposer) {
         checkOpen();
         disposers.push(disposer);
     }
 
     /**
-     * Starts closing this scope and all owned descendants.
+     * Closes this scope and all owned descendants.
      *
      * <p>Owned child scopes are closed first, then local disposers run in LIFO
      * order, local providers are cleared, and this scope is detached from every
-     * parent owner list. Synchronous and asynchronous disposer failures are
-     * collected; cleanup continues and the returned stage completes
-     * exceptionally after all callbacks have been attempted.</p>
-     *
-     * @return stage completed when this scope is fully closed
+     * parent owner list. Cleanup failures are collected; cleanup continues and
+     * this method throws a {@link ScopeException} after all callbacks have been
+     * attempted.</p>
      */
-    public CompletionStage<Void> closeAsync() {
-        if (closeStage != null) return closeStage;
-        if (state == State.CLOSED) {
-            closeStage = CompletableFuture.completedFuture(null);
-            return closeStage;
-        }
+    @Override
+    public void close() {
+        if (state == State.CLOSED) return;
+        if (state == State.CLOSING) throw new ScopeStateException(toString() + " is " + state);
 
         state = State.CLOSING;
         List<Scope<?>> owned = new ArrayList<>(ownedScopes.values());
         Collections.reverse(owned);
 
-        CompletionStage<Void> stage = CompletableFuture.completedFuture(null);
         List<Throwable> failures = new ArrayList<>();
 
         for (Scope<?> child : owned) {
-            stage = stage.handle((ignored, failure) -> {
+            try {
+                child.close();
+            } catch (Throwable failure) {
                 recordFailure(failures, failure);
-                return null;
-            }).thenCompose((ignored) -> child.closeAsync());
+            }
         }
-
-        stage = stage.handle((ignored, failure) -> {
-            recordFailure(failures, failure);
-            return null;
-        });
 
         while (!disposers.isEmpty()) {
-            AsyncDisposer disposer = disposers.pop();
-            stage = stage.thenCompose((ignored) -> runDisposer(disposer))
-                    .handle((ignored, failure) -> {
-                        recordFailure(failures, failure);
-                        return null;
-                    });
+            Disposer disposer = disposers.pop();
+            try {
+                runDisposer(disposer);
+            } catch (Throwable failure) {
+                recordFailure(failures, failure);
+            }
         }
 
-        closeStage = stage.thenRun(() -> {
-            ownedScopes.clear();
-            providers.clear();
+        ownedScopes.clear();
+        providers.clear();
 
-            for (Edge<?> edge : parents) {
-                edge.parent().ownedScopes.remove(this.context);
+        for (Edge<?> edge : parents) {
+            edge.parent().ownedScopes.remove(this.context);
+        }
+
+        state = State.CLOSED;
+
+        if (!failures.isEmpty()) {
+            RuntimeException failure = new ScopeException("Scope cleanup failed");
+            for (Throwable throwable : failures) {
+                failure.addSuppressed(throwable);
             }
-
-            state = State.CLOSED;
-
-            if (!failures.isEmpty()) {
-                RuntimeException failure = new ScopeException("Scope cleanup failed");
-                for (Throwable throwable : failures) {
-                    failure.addSuppressed(throwable);
-                }
-                throw failure;
-            }
-        });
-
-        return closeStage;
+            throw failure;
+        }
     }
 
-    /**
-     * Starts closing this scope without waiting for asynchronous cleanup.
-     *
-     * <p>Use {@link #closeAsync()} when callers need to observe completion or
-     * cleanup failures.</p>
-     */
-    @Override
-    public void close() {
-        closeAsync();
-    }
-
-    private static CompletionStage<Void> runDisposer(AsyncDisposer disposer) {
+    private static void runDisposer(Disposer disposer) throws Throwable {
         try {
-            CompletionStage<Void> stage = disposer.dispose();
-            if (stage == null) {
-                return CompletableFuture.failedFuture(new ScopeException("Disposer returned null"));
-            }
-            return stage;
+            disposer.dispose();
         } catch (Throwable throwable) {
-            return CompletableFuture.failedFuture(throwable);
+            throw throwable;
         }
     }
 

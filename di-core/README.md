@@ -66,6 +66,29 @@ Un `Scope` se lit comme un scope lexical dans JavaScript, Rust ou Java: une vale
 
 Cette vue classique est un arbre: un enfant herite des providers visibles de son parent. La resolution par defaut utilise la definition la plus proche, appelee `NEAREST`. Comme pour une variable locale, une valeur locale shadow la valeur d'un parent.
 
+## Modele de duree de vie
+
+Un scope est une unite de duree de vie atomique: tous les objets crees ou
+enregistres dans ce scope vivent aussi longtemps que ce scope reste ouvert.
+Il n'existe pas d'API pour fermer ou retirer un objet a la demande a
+l'interieur d'un scope.
+
+Concretement:
+
+- chaque provider d'un scope retourne un singleton de ce scope;
+- `get(...)` peut etre appele dynamiquement, mais l'objet obtenu appartient au
+  scope jusqu'a `scope.close()`;
+- `close()` bloque et ferme tout le scope: enfants possedes, hooks de cleanup,
+  puis providers locaux;
+- pour une ressource qui doit etre fermee plus tot, creer un scope enfant dedie
+  a cette ressource, l'utiliser depuis cet enfant, puis fermer ce scope enfant.
+
+Ce modele est volontairement strict. Le parent peut etre visible depuis
+l'enfant, mais l'inverse n'est pas vrai: un objet alloue dans un scope enfant ne
+devient pas une dependance du parent. Cette asymetrie force une frontiere claire
+de visibilite, d'etat et de cycle de vie. En pratique, "1 scope = 1 container
+lifetime": allocation dynamique autorisee, desallocation partielle interdite.
+
 ## Premier exemple
 
 ```java
@@ -86,7 +109,7 @@ Quand `root.get(Service.class)` est appele:
 3. L'injecteur inspecte le constructeur public unique de `Service`.
 4. Il resout `Config`.
 5. Il instancie `Service(config)`.
-6. L'instance creee est cachee dans le scope comme singleton scope.
+6. L'instance creee est cachee dans le scope comme singleton de scope.
 
 ## API principale
 
@@ -186,7 +209,8 @@ Provider<Service> service = scope.provider(Service.class);
 Service value = service.get();
 ```
 
-Dans le modele actuel, les providers crees automatiquement sont scopes comme singletons: plusieurs appels retournent la meme instance tant que le scope reste ouvert.
+Les providers d'un scope sont scopes comme singletons: plusieurs appels
+retournent la meme instance tant que le scope reste ouvert.
 
 ### `providers(type)`
 
@@ -378,17 +402,20 @@ Quand un scope est ferme:
 - il est detache des parents qui le possedent;
 - les operations futures echouent avec `ScopeStateException`.
 
-`close()` demarre la fermeture sans attendre les cleanups asynchrones. Utiliser
-`closeAsync()` quand le code appelant doit savoir quand le scope est vraiment
-ferme ou observer les erreurs de cleanup.
+`close()` est bloquant et sequentiel: il ferme d'abord les enfants possedes,
+puis execute les cleanups locaux en LIFO. Les enfants possedes sont fermes dans
+l'ordre inverse de leur attachement au parent; les ressources locales sont
+fermees dans l'ordre inverse de leur allocation. L'appel retourne seulement
+quand le scope est ferme, ou lance une `ScopeException` apres avoir tente tous
+les cleanups.
 
 ```java
-scope.closeAsync().toCompletableFuture().join();
+scope.close();
 ```
 
-Pendant un cleanup asynchrone, le scope reste en etat `CLOSING`. Il passe en
-`CLOSED` seulement quand tous les enfants possedes et tous les disposers locaux
-sont termines.
+Pendant la fermeture, le scope est en etat `CLOSING`. Il passe en `CLOSED`
+seulement quand tous les enfants possedes et tous les disposers locaux sont
+termines.
 
 ## Lifecycle des beans DI
 
@@ -423,7 +450,7 @@ Void method()
 
 Les hooks des superclasses sont appeles avant ceux des subclasses. Si un
 `@PostConstruct` echoue, la creation du bean echoue avec `BeanCreationException`
-et l'instance n'est pas exposee comme singleton scope.
+et l'instance n'est pas exposee comme singleton de scope.
 
 ### `@PreDestroy` et `AutoCloseable`
 
@@ -432,8 +459,8 @@ et l'instance n'est pas exposee comme singleton scope.
 ```java
 public class Service {
     @PreDestroy
-    private CompletionStage<Void> stop() {
-        return flushAsync();
+    private void stop() {
+        flush();
     }
 }
 ```
@@ -443,7 +470,6 @@ Signatures supportees:
 ```java
 void method()
 Void method()
-CompletionStage<Void> method()
 ```
 
 Si un bean implemente `AutoCloseable` ou `Closeable`, sa methode `close()` est
@@ -455,13 +481,13 @@ declares sur la subclass s'executent avant ceux de la superclass. Les hooks
 annotes s'executent avant le `close()` automatique.
 
 Si un cleanup echoue, le scope tente quand meme les autres cleanups. Ensuite,
-`closeAsync()` complete exceptionnellement avec une `ScopeException` contenant
-les echecs en exceptions supprimees.
+`close()` lance une `ScopeException` contenant les echecs en exceptions
+supprimees.
 
 Les valeurs enregistrees avec `seed(...)` ne sont pas incluses automatiquement
-dans ce lifecycle: elles restent possedees par le code appelant. Une API
-explicite pourra etre ajoutee plus tard pour enregistrer des objets externes
-comme ressources possedees par un scope.
+dans ce lifecycle: elles restent possedees par le code appelant. Si une
+ressource doit etre possedee et fermee par DI, elle doit etre creee par un
+provider/binding dans le scope qui represente sa duree de vie.
 
 ## Multi-parent scopes
 
@@ -634,3 +660,5 @@ PlayerData data = player.get(PlayerData.class);
 - Utiliser `@Named` ou `Key.of(type, qualifier)` des qu'il y a plusieurs valeurs conceptuelles du meme type.
 - Eviter les multi-parents avec les memes keys non qualifiees sauf si l'ambiguite est voulue et geree via `providers(...)`.
 - Preferer des scopes petits et explicites: root, joueur, partie, requete, session, tenant, job.
+- Creer un scope enfant temporaire pour toute ressource qui doit vivre moins
+  longtemps que son parent, puis fermer ce scope enfant.
