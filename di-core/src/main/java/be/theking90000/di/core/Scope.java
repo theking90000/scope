@@ -124,7 +124,7 @@ public class Scope<C> implements AutoCloseable {
     /**
      * Controls how provider lookup walks visible parent scopes.
      */
-    enum Collect {
+    public enum Collect {
         /**
          * Stops at the first scope that provides the requested key on each branch.
          */

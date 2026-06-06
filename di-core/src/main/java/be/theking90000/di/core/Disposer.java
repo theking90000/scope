@@ -4,7 +4,7 @@ package be.theking90000.di.core;
  * Cleanup callback run by {@link Scope#close()}.
  */
 @FunctionalInterface
-interface Disposer {
+public interface Disposer {
     /**
      * Runs this cleanup callback.
      *
