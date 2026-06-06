@@ -102,9 +102,9 @@ scope **is** the model, and dependency injection is just what falls out of it.
 | **Runtime-manipulable scope graph** (create/drop/override) |      ❌      |   ❌    |   ❌    |     ❌     |     ✅      |
 | **Scope _is_ the model** (DI is a consequence)             |      ❌      |   ❌    |   ❌    |     ❌     |     ✅      |
 | **No "singleton" notion** (everything is scope-singleton)  |      ❌      |   ❌    |   ❌    |     ❌     |     ✅      |
-| Deterministic `close()` (domain cleanup before GC)         |      ⚠️      |   ⚠️    |   ⚠️    |     ✅     |     ✅      |
+| Deterministic `close()` (domain cleanup before GC)         |      ❌      |   ✅    |   ⚠️    |     ✅     |     ✅      |
 | **Domain-agnostic API** (no annotations / classloaders)    |      ❌      |   ❌    |   ❌    |     ❌     |     ✅      |
-| Resolution                                                 |   compile    | compile | runtime |  compile   | **runtime** |
+| Resolution                                                 |   runtime    | compile | runtime |  compile   | **runtime** |
 
 The differentiator is not any single cell — it is having all of them at once:
 **a multi-parent, lexically-shadowed scope graph you reshape at runtime, scope-first.**
