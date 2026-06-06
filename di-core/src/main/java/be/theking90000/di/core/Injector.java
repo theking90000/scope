@@ -1,5 +1,8 @@
 package be.theking90000.di.core;
 
+import java.lang.invoke.MethodHandle;
+import java.lang.invoke.MethodHandles;
+import java.lang.invoke.MethodType;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Modifier;
 import java.lang.reflect.Parameter;
@@ -31,8 +34,22 @@ public class Injector<T> {
 
     private record InjectedType(Class<?> type, boolean isIterable) {}
 
+    private static final MethodHandles.Lookup LOOKUP = MethodHandles.lookup();
+
+    /**
+     * Cache of injectors keyed by type. {@link ClassValue} guarantees that
+     * {@code computeValue} runs at most once per class, so each type is scanned
+     * a single time and the resulting injector is shared across scopes.
+     */
+    private static final ClassValue<Injector<?>> CACHE = new ClassValue<>() {
+        @Override
+        protected Injector<?> computeValue(Class<?> type) {
+            return new Injector<>(type);
+        }
+    };
+
     private final Class<T> type;
-    private final Constructor<T> constructor;
+    private final MethodHandle constructorHandle;
     private final LifecycleHooks lifecycleHooks;
 
     private final List<InjectedKey<?>> parameters = new ArrayList<>();
@@ -43,7 +60,6 @@ public class Injector<T> {
      * @param type class to inspect
      * @throws UnsupportedInjectionException if the class cannot be constructed by this injector
      */
-    @SuppressWarnings("unchecked")
     private Injector(Class<T> type) {
         this.type = type;
         this.lifecycleHooks = LifecycleHooks.of(type);
@@ -51,7 +67,7 @@ public class Injector<T> {
         Constructor<?>[] constructors = type.getConstructors();
 
         if (constructors.length == 1) {
-            this.constructor = (Constructor<T>) constructors[0];
+            Constructor<?> constructor = constructors[0];
 
             for (Parameter parameter : constructor.getParameters()) {
                 Named named = parameter.getAnnotation(Named.class);
@@ -81,6 +97,14 @@ public class Injector<T> {
                 }
 
                 parameters.add(new InjectedKey<>(Key.of(parameterType, name), isProvider, isIterable));
+            }
+
+            try {
+                this.constructorHandle = LOOKUP.unreflectConstructor(constructor)
+                        .asSpreader(Object[].class, parameters.size())
+                        .asType(MethodType.methodType(Object.class, Object[].class));
+            } catch (IllegalAccessException e) {
+                throw new UnsupportedInjectionException(type + " constructor is not accessible");
             }
         } else {
             throw new UnsupportedInjectionException(
@@ -165,6 +189,7 @@ public class Injector<T> {
      * @return newly constructed instance
      * @throws BeanCreationException if the provider list is incomplete or reflection fails
      */
+    @SuppressWarnings("unchecked")
     public T instantiate(List<Provider<?>> providers) {
         if (providers.size() != this.parameters.size())
             throw new BeanCreationException(
@@ -183,13 +208,14 @@ public class Injector<T> {
             }
         }
 
+        T instance;
         try {
-            T instance = this.constructor.newInstance(resolvedParameters);
-            lifecycleHooks.postConstruct(instance);
-            return instance;
-        } catch (ReflectiveOperationException e) {
-            throw new BeanCreationException(e);
+            instance = (T) constructorHandle.invokeExact(resolvedParameters);
+        } catch (Throwable t) {
+            throw new BeanCreationException(t);
         }
+        lifecycleHooks.postConstruct(instance);
+        return instance;
     }
 
     /**
@@ -212,8 +238,9 @@ public class Injector<T> {
      * @return injector for the requested type
      * @throws UnsupportedInjectionException if the type cannot be constructed by this injector
      */
+    @SuppressWarnings("unchecked")
     public static <T> Injector<T> of(Class<T> type) {
-        return new Injector<>(type);
+        return (Injector<T>) CACHE.get(type);
     }
 
     /**
