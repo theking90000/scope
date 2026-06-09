@@ -1,17 +1,33 @@
 machine,scenario,retained_bytes,retained_human,after_close_bytes,after_close_human
-MacbookAirM4-16G-13inch,100k plain context records,2013266,1.92 MiB,800,800.00 B
-MacbookAirM4-16G-13inch,"100k plain map<Integer, Handler>",9311355,8.88 MiB,760,760.00 B
-MacbookAirM4-16G-13inch,10k empty sibling scopes,11418993,10.89 MiB,74957,73.20 KiB
-MacbookAirM4-16G-13inch,100k empty sibling scopes,114944901,109.62 MiB,632,632.00 B
-MacbookAirM4-16G-13inch,10k sibling scopes with 8 beans,42299556,40.34 MiB,77005,75.20 KiB
-MacbookAirM4-16G-13inch,100k sibling scopes with 8 beans,423729562,404.10 MiB,0,0.00 B
-MacbookAirM4-16G-13inch,10k sibling scopes with 32 beans,134448415,128.22 MiB,59515,58.12 KiB
-MacbookAirM4-16G-13inch,nested chain depth 1k,1226834,1.17 MiB,1116,1.09 KiB
-Ryzen5-3600-32G-Linux,100k plain context records,2002780,1.91 MiB,792,792.00 B
-Ryzen5-3600-32G-Linux,"100k plain map<Integer, Handler>",9300869,8.87 MiB,624,624.00 B
-Ryzen5-3600-32G-Linux,10k empty sibling scopes,11471421,10.94 MiB,122900,120.02 KiB
-Ryzen5-3600-32G-Linux,100k empty sibling scopes,114934415,109.61 MiB,632,632.00 B
-Ryzen5-3600-32G-Linux,10k sibling scopes with 8 beans,42351985,40.39 MiB,65700,64.16 KiB
-Ryzen5-3600-32G-Linux,100k sibling scopes with 8 beans,423928791,404.29 MiB,0,0.00 B
-Ryzen5-3600-32G-Linux,10k sibling scopes with 32 beans,134479872,128.25 MiB,59320,57.93 KiB
-Ryzen5-3600-32G-Linux,nested chain depth 1k,1226834,1.17 MiB,1260,1.23 KiB
+MacbookAir-M4-16G,100k plain context records,2013266,1.92 MiB,800,800.00 B
+MacbookAir-M4-16G,"100k plain map<Integer, Handler>",9311355,8.88 MiB,760,760.00 B
+MacbookAir-M4-16G,10k empty sibling scopes,11418993,10.89 MiB,74957,73.20 KiB
+MacbookAir-M4-16G,100k empty sibling scopes,114944901,109.62 MiB,632,632.00 B
+MacbookAir-M4-16G,10k sibling scopes with 8 beans,42299556,40.34 MiB,77005,75.20 KiB
+MacbookAir-M4-16G,100k sibling scopes with 8 beans,423729562,404.10 MiB,0,0.00 B
+MacbookAir-M4-16G,10k sibling scopes with 32 beans,134448415,128.22 MiB,59515,58.12 KiB
+MacbookAir-M4-16G,nested chain depth 1k,1226834,1.17 MiB,1116,1.09 KiB
+OVH-VPS-4vCPU-8G,100k plain context records,2002780,1.91 MiB,792,792.00 B
+OVH-VPS-4vCPU-8G,"100k plain map<Integer, Handler>",9300869,8.87 MiB,624,624.00 B
+OVH-VPS-4vCPU-8G,10k empty sibling scopes,11471421,10.94 MiB,122860,119.98 KiB
+OVH-VPS-4vCPU-8G,100k empty sibling scopes,114913444,109.59 MiB,632,632.00 B
+OVH-VPS-4vCPU-8G,10k sibling scopes with 8 beans,42299556,40.34 MiB,65700,64.16 KiB
+OVH-VPS-4vCPU-8G,100k sibling scopes with 8 beans,423792476,404.16 MiB,0,0.00 B
+OVH-VPS-4vCPU-8G,10k sibling scopes with 32 beans,134490358,128.26 MiB,59320,57.93 KiB
+OVH-VPS-4vCPU-8G,nested chain depth 1k,1226834,1.17 MiB,1260,1.23 KiB
+Raspberry-pi-5-8G,100k plain context records,2002780,1.91 MiB,792,792.00 B
+Raspberry-pi-5-8G,"100k plain map<Integer, Handler>",9300869,8.87 MiB,624,624.00 B
+Raspberry-pi-5-8G,10k empty sibling scopes,11471421,10.94 MiB,122870,119.99 KiB
+Raspberry-pi-5-8G,100k empty sibling scopes,114923930,109.60 MiB,632,632.00 B
+Raspberry-pi-5-8G,10k sibling scopes with 8 beans,42299556,40.34 MiB,65700,64.16 KiB
+Raspberry-pi-5-8G,100k sibling scopes with 8 beans,423781990,404.15 MiB,0,0.00 B
+Raspberry-pi-5-8G,10k sibling scopes with 32 beans,134500844,128.27 MiB,59320,57.93 KiB
+Raspberry-pi-5-8G,nested chain depth 1k,1226834,1.17 MiB,1260,1.23 KiB
+Ryzen5-3600-32G,100k plain context records,2002780,1.91 MiB,792,792.00 B
+Ryzen5-3600-32G,"100k plain map<Integer, Handler>",9300869,8.87 MiB,624,624.00 B
+Ryzen5-3600-32G,10k empty sibling scopes,11471421,10.94 MiB,122900,120.02 KiB
+Ryzen5-3600-32G,100k empty sibling scopes,114934415,109.61 MiB,632,632.00 B
+Ryzen5-3600-32G,10k sibling scopes with 8 beans,42351985,40.39 MiB,65700,64.16 KiB
+Ryzen5-3600-32G,100k sibling scopes with 8 beans,423928791,404.29 MiB,0,0.00 B
+Ryzen5-3600-32G,10k sibling scopes with 32 beans,134479872,128.25 MiB,59320,57.93 KiB
+Ryzen5-3600-32G,nested chain depth 1k,1226834,1.17 MiB,1260,1.23 KiB
