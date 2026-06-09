@@ -1,0 +1,5 @@
+# Raw per-machine benchmark reports — regenerated locally, not committed.
+*.txt
+
+# copyparty / upload history snapshots
+.hist/

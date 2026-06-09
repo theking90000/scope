@@ -1,0 +1,17 @@
+machine,scenario,retained_bytes,retained_human,after_close_bytes,after_close_human,count,is_scope,bytes_per_scope,leak_pct
+MacbookAirM4-16G-13inch,100k plain context records,2013266,1.92 MiB,800,800.00 B,100000.0,False,20.13266,0.03973642827127662
+MacbookAirM4-16G-13inch,"100k plain map<Integer, Handler>",9311355,8.88 MiB,760,760.00 B,100000.0,False,93.11355,0.008162077377567497
+MacbookAirM4-16G-13inch,10k empty sibling scopes,11418993,10.89 MiB,74957,73.20 KiB,10000.0,True,1141.8993,0.6564239070818241
+MacbookAirM4-16G-13inch,100k empty sibling scopes,114944901,109.62 MiB,632,632.00 B,100000.0,True,1149.44901,0.0005498286522513947
+MacbookAirM4-16G-13inch,10k sibling scopes with 8 beans,42299556,40.34 MiB,77005,75.20 KiB,10000.0,True,4229.9556,0.18204682810382217
+MacbookAirM4-16G-13inch,100k sibling scopes with 8 beans,423729562,404.10 MiB,0,0.00 B,100000.0,True,4237.29562,0.0
+MacbookAirM4-16G-13inch,10k sibling scopes with 32 beans,134448415,128.22 MiB,59515,58.12 KiB,10000.0,True,13444.8415,0.04426604806014262
+MacbookAirM4-16G-13inch,nested chain depth 1k,1226834,1.17 MiB,1116,1.09 KiB,,False,,0.09096585194084937
+Ryzen5-3600-32G-Linux,100k plain context records,2002780,1.91 MiB,792,792.00 B,100000.0,False,20.0278,0.03954503240495711
+Ryzen5-3600-32G-Linux,"100k plain map<Integer, Handler>",9300869,8.87 MiB,624,624.00 B,100000.0,False,93.00869,0.006709050519903032
+Ryzen5-3600-32G-Linux,10k empty sibling scopes,11471421,10.94 MiB,122900,120.02 KiB,10000.0,True,1147.1421,1.071358116836615
+Ryzen5-3600-32G-Linux,100k empty sibling scopes,114934415,109.61 MiB,632,632.00 B,100000.0,True,1149.34415,0.0005498788156706588
+Ryzen5-3600-32G-Linux,10k sibling scopes with 8 beans,42351985,40.39 MiB,65700,64.16 KiB,10000.0,True,4235.1985,0.15512850224139435
+Ryzen5-3600-32G-Linux,100k sibling scopes with 8 beans,423928791,404.29 MiB,0,0.00 B,100000.0,True,4239.28791,0.0
+Ryzen5-3600-32G-Linux,10k sibling scopes with 32 beans,134479872,128.25 MiB,59320,57.93 KiB,10000.0,True,13447.9872,0.044110690408747565
+Ryzen5-3600-32G-Linux,nested chain depth 1k,1226834,1.17 MiB,1260,1.23 KiB,,False,,0.10270338122353961
