@@ -109,6 +109,14 @@ scope **is** the model, and dependency injection is just what falls out of it.
 The differentiator is not any single cell — it is having all of them at once:
 **a multi-parent, lexically-shadowed scope graph you reshape at runtime, scope-first.**
 
+## Benchmarks
+
+Performance and memory benchmarks — the evidence behind the "lightweight,
+dynamic DI" claim — live in
+[`scope-benchmarks/`](scope-benchmarks/README.md): per-scope create/close cost,
+memory footprint, leak-after-`close()` checks and scaling charts across several
+machines.
+
 ## Hello, scope
 
 ```java
