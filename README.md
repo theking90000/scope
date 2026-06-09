@@ -202,6 +202,8 @@ Credentials go in `~/.m2/settings.xml` under a matching `<server><id>github</id>
 
 ## Documentation
 
+The hosted docs are available at **<https://theking90000.github.io/scope/>**.
+
 The full English guide lives in **[`docs/`](docs/README.md)** — start with the
 [mental model](docs/mental-model.md), then the
 [API reference](docs/api-reference.md), [extension hooks](docs/extension-hooks.md),
