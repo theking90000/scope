@@ -1,6 +1,5 @@
 plugins {
   base
-  id("com.github.ben-manes.versions") version "0.54.0"
 }
 
 val defaultVersion = property("version").toString()
